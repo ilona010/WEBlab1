@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вхід до чату</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #20B2AA;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .login-container {
+            background-color: #20B2AA;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #FFD700;
+            border: none;
+            border-radius: 4px;
+            color: black;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #FFC700;
+        }
+
+        #chat-container {
+            display: flex;
+            justify-content: space-between;
+            background-color: #008B8B;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            height: 80vh;
+        }
+        #userList {
+            background-color: #F0F8FF;
+            list-style-type: none;
+            padding: 10px;
+            width: 200px;
+        }
+        #messages {
+            background-color: #FFFFFF;
+            height: 70vh;
+            width: 100%;
+            overflow-y: scroll;
+            padding: 10px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <form id="loginForm">
+            <input type="text" id="username" placeholder="user1" required>
+            <input type="text" id="room" placeholder="room1" required>
+            <button type="submit">Приєднатись</button>
+        </form>
+    </div>
+
+    <div id="chat-container" style="display: none;">
+        <div>
+            <p>Room: <span id="roomName"></span></p>
+            <p>Username: <span id="userName"></span></p>
+            <button id="exitChat">Вийти з чату</button>
+        </div>
+        <div>
+            <h3>Users in the chatroom</h3>
+            <ul id="userList"><!-- Список користувачів -->
+                
+            </ul>
+        </div>
+        <div>
+            <div id="messages"></div>
+            <input id="messageInput" placeholder="Message" />
+            <button id="sendMessage">Send</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(function() {
+            var socket = io();
+
+            $('#loginForm').submit(function(e) {
+                e.preventDefault();
+                var username = $('#username').val();
+                var room = $('#room').val();
+
+                // Приєднання до кімнати
+                socket.emit('joinRoom', { username, room });
+
+                // Сховати форму і показати інтерфейс чату
+                $('.login-container').hide();
+                $('#chat-container').show();
+
+                // Оновити інформацію про кімнату і користувача
+                $('#roomName').text(room);
+                $('#userName').text(username);
+
+                // Отримання списку користувачів
+                socket.on('roomUsers', ({ room, users }) => {
+                    $('#userList').empty();
+                    users.forEach(user => {
+                        $('#userList').append(`<li>${user.username}</li>`);
+                    });
+                });
+
+                // Отримання повідомлень
+                socket.on('message', message => {
+                    $('#messages').append(`<p><strong>${message.username}</strong>: ${message.text}</p>`);
+                });
+
+                // Відправка повідомлень
+                $('#sendMessage').click(function() {
+                    var message = $('#messageInput').val();
+                    if (message) {
+                        socket.emit('chatMessage', message);
+                        $('#messageInput').val('');
+                    }
+                });
+
+                // Вихід з чату
+                $('#exitChat').click(function() {
+                    socket.disconnect();  // Від'єднання від чату
+                    window.location.reload();  // Перезавантаження сторінки для повернення до форми входу
+                });
+            });
+        });
+    </script>
+</body>
+</html>
